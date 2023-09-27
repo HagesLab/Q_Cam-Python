@@ -14,6 +14,8 @@ import matplotlib.pyplot as plt
 from qcam import Camera
 from mono import Mono
 
+from calibration import get_position
+
 def frame_to_image(frame):
     """
     Convert frame buffer to image array
@@ -59,22 +61,34 @@ if __name__ == "__main__":
             
             camera.set_camera_param("Exposure", 1000000)  # replace 1000 with the desired exposure value
             camera.set_camera_param("Gain", 1023)  # replace 1000 with the desired exposure value
-            camera.set_camera_param("Binning", 2)  # replace 1000 with the desired exposure value
+            camera.set_camera_param("Binning", 8)  # replace 1000 with the desired exposure value
             camera.retrieve_parameters()
             print(list(camera.parameters.values()))
             
-            mono.set_wavelength(0)
+            wl = 10
+            y0 = 40
+            y1 = 80
+            mono.set_wavelength(wl)
             frame = camera.grab_frame()
             image = frame_to_image(frame)
+            
+            x = get_position(wl, image.shape[1], grating_no=1, binning=8)
             plt.figure(0)
             plt.imshow(image, cmap='rainbow')
+            plt.axhline(y0, color='r')
+            plt.axhline(y1, color='r')
             
-            mono.set_wavelength(10)
-            frame = camera.grab_frame()
-            image = frame_to_image(frame)
-
             plt.figure(1)
-            plt.imshow(image, cmap='rainbow')
+            plt.plot(x, np.sum(image[y0:y1], axis=0))
+            
+                
+            
+            # mono.set_wavelength(10)
+            # frame = camera.grab_frame()
+            # image = frame_to_image(frame)
+
+            # plt.figure(1)
+            # plt.imshow(image, cmap='rainbow')
         
     except SystemExit:
         print("An error occurred, exiting...")
