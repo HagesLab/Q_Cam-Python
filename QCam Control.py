@@ -6,6 +6,7 @@ Created on Thu Jun 29 13:08:39 2023
 """
 
 import sys
+import os
 import ctypes
 
 import numpy as np
@@ -57,32 +58,43 @@ if __name__ == "__main__":
             print(list(camera.parameters.values()))
             for name, param in camera.parameters.items():
                 print(f"For parameter {name}: min_value is {param.min_value}, max_value is {param.max_value}")
-    
-            
-            camera.set_camera_param("Exposure", 1000000)  # replace 1000 with the desired exposure value
+
+            bkg = np.loadtxt("bkg.txt").astype(int)[:, 1]
+            out_path = r"."
+
+            camera.set_camera_param("Exposure", int(5 * 1e6))  # replace 1000 with the desired exposure value
             camera.set_camera_param("Gain", 1023)  # replace 1000 with the desired exposure value
-            camera.set_camera_param("Binning", 8)  # replace 1000 with the desired exposure value
+            camera.set_camera_param("Binning", 2)  # replace 1000 with the desired exposure value
             camera.retrieve_parameters()
             print(list(camera.parameters.values()))
             
-            wl = 10
-            y0 = 40
-            y1 = 80
-            mono.set_wavelength(wl)
-            frame = camera.grab_frame()
-            image = frame_to_image(frame)
+            y0 = 150
+            y1 = 300
             
-            x = get_position(wl, image.shape[1], grating_no=1, binning=8)
-            plt.figure(0)
-            plt.imshow(image, cmap='rainbow')
-            plt.axhline(y0, color='r')
-            plt.axhline(y1, color='r')
-            
-            plt.figure(1)
-            plt.plot(x, np.sum(image[y0:y1], axis=0))
-            
+            for wl in np.arange(450, 1050, 5):
+                print(wl)
+                mono.set_wavelength(wl)
+                frame = camera.grab_frame()
+                image = frame_to_image(frame)
                 
-            
+                x = get_position(wl, image.shape[1], grating_no=1, binning=2)
+
+                integral = np.sum(image[y0:y1], axis=0).astype(int)
+                integral -= bkg
+
+                if wl in [0, 500, 600, 700, 800, 900, 1000]:
+                    plt.figure(wl)
+                    plt.imshow(image, cmap='rainbow')
+                    plt.axhline(y0, color='r')
+                    plt.axhline(y1, color='r')
+                    
+                    plt.figure(wl+1)
+                    plt.plot(x, integral)
+                    plt.ylabel("Counts")
+                    plt.xlabel("WL [nm]")
+
+                np.savetxt(os.path.join(out_path, f"{wl}.txt"), np.vstack((x, integral)).T, header="WL [nm]\tCounts", fmt='%.3f', delimiter="\t")
+                #np.savetxt("bkg.txt", np.vstack((x, integral)).T, header="WL [nm]\tCounts", fmt="%.3f", delimiter="\t")
             # mono.set_wavelength(10)
             # frame = camera.grab_frame()
             # image = frame_to_image(frame)
