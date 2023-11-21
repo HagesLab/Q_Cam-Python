@@ -5,7 +5,7 @@ Created on Tue Sep 19 16:40:44 2023
 @author: cfai2304
 """
 import serial
-
+from calibration import to_wavelength
 DEFAULT_BAUDRATE = 9600
 DEFAULT_PORT = "COM11"
 DEFAULT_TIMEOUT = 10 # ms
@@ -47,16 +47,24 @@ class Mono:
         self.ser.write("?GRATINGS".encode()+ b"\x0d")
         return self.wait_for_serial()
     
+    def set_grating(self, num):
+        """Set grating in num'th position as active"""
+        self.ser.write("{:0d} GRATING".format(num).encode() + b"\x0d")
+        return self.wait_for_serial()
+    
     def set_wavelength(self, w):
         """Move mono to wavelength w, in nm"""
         self.ser.write("{:.3f} GOTO".format(w).encode()+ b"\x0d")
         return self.wait_for_serial()
+    
+    def set_raman_shift(self, r, w0=532):
+        """Move mono to raman shift r, relative to laser wavelength w0"""
+        w = to_wavelength(r, w0)
+        return self.set_wavelength(w)
 
 if __name__ == "__main__":
     m = Mono()
-    print(m.get_gratings())
-    m.set_wavelength(1000)
-    m.set_wavelength(100)
+    print(m.set_grating(3))
     m.close()
     
     

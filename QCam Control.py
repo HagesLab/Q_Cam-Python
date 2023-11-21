@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from qcam import Camera
 from mono import Mono
 
-from calibration import get_position
+from calibration import get_position, to_wavelength, to_raman
 
 def frame_to_image(frame):
     """
@@ -62,38 +62,42 @@ if __name__ == "__main__":
             bkg = np.loadtxt("bkg.txt").astype(int)[:, 1]
             out_path = r"."
 
-            camera.set_camera_param("Exposure", int(5 * 1e6))  # replace 1000 with the desired exposure value
+            camera.set_camera_param("Exposure", int(20 * 1e6))  # replace 1000 with the desired exposure value
             camera.set_camera_param("Gain", 1023)  # replace 1000 with the desired exposure value
             camera.set_camera_param("Binning", 2)  # replace 1000 with the desired exposure value
             camera.retrieve_parameters()
             print(list(camera.parameters.values()))
+            grating_no = 3
+            mono.set_grating(grating_no)
             
             y0 = 150
             y1 = 300
             
-            for wl in np.arange(450, 1050, 5):
-                print(wl)
-                mono.set_wavelength(wl)
+            for r in np.arange(50, 600, 5):
+                print(r)
+                mono.set_raman_shift(r, 532)
                 frame = camera.grab_frame()
                 image = frame_to_image(frame)
                 
-                x = get_position(wl, image.shape[1], grating_no=1, binning=2)
+                x = get_position(to_wavelength(r, w0=532), image.shape[1],
+                                 grating_no=grating_no, binning=2)
+                x = to_raman(x, w0=532)
 
                 integral = np.sum(image[y0:y1], axis=0).astype(int)
                 integral -= bkg
 
-                if wl in [0, 500, 600, 700, 800, 900, 1000]:
-                    plt.figure(wl)
-                    plt.imshow(image, cmap='rainbow')
-                    plt.axhline(y0, color='r')
-                    plt.axhline(y1, color='r')
-                    
-                    plt.figure(wl+1)
-                    plt.plot(x, integral)
-                    plt.ylabel("Counts")
-                    plt.xlabel("WL [nm]")
 
-                np.savetxt(os.path.join(out_path, f"{wl}.txt"), np.vstack((x, integral)).T, header="WL [nm]\tCounts", fmt='%.3f', delimiter="\t")
+                plt.figure(r)
+                plt.imshow(image, cmap='rainbow')
+                plt.axhline(y0, color='r')
+                plt.axhline(y1, color='r')
+                
+                plt.figure(r+1)
+                plt.plot(x, integral)
+                plt.ylabel("Counts")
+                plt.xlabel("WL [nm]")
+
+                np.savetxt(os.path.join(out_path, f"{r}.txt"), np.vstack((x, integral)).T, header="WL [nm]\tCounts", fmt='%.3f', delimiter="\t")
                 #np.savetxt("bkg.txt", np.vstack((x, integral)).T, header="WL [nm]\tCounts", fmt="%.3f", delimiter="\t")
             # mono.set_wavelength(10)
             # frame = camera.grab_frame()

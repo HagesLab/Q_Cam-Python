@@ -23,3 +23,13 @@ def get_position(wl, n_pixels, grating_no, binning):
     
     x = x0 + c * x
     return x
+
+def to_wavelength(r, w0):
+    """Calculate absolute wavelength corresponding to raman shift r, in cm^-1
+       relative to laser wavelength w0, in nm"""
+    return (1e7 * w0 ** -1 - r) ** -1 * 1e7
+
+def to_raman(w, w0):
+    """Calculate raman shift r, in cm^-1 corresponding to absolute wavelength w,
+        in nm, relative to laser wavelength w0, in nm"""
+    return (w0 * 1e-7) ** -1 - (w * 1e-7) ** -1
